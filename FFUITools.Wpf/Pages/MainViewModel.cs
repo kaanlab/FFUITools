@@ -29,6 +29,16 @@ namespace FFUITools.Wpf.Pages
             }
         }
 
+        private bool _enableMultiThread;
+        public bool EnableMultiThread
+        {
+            get { return this._enableMultiThread; }
+            set
+            {
+                SetAndNotify(ref this._enableMultiThread, value);
+            }
+        }
+
         private string _fileName;
         public string FileName
         {
@@ -89,13 +99,18 @@ namespace FFUITools.Wpf.Pages
             folderDialog.ShowDialog();
             DirectoryName = folderDialog.SelectedPath;
 
+            if (String.IsNullOrEmpty(DirectoryName))
+            {
+                DirectoryName = @"C:\";
+            }
+
             FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".mp4").ToList();
             foreach (var item in FilesInFolder)
             {
                 log.AppendLine($"{item.FullName}");
             }
 
-            log.AppendLine($"Добавлено {FilesInFolder.Count} файлов");
+            log.AppendLine($"Найдено {FilesInFolder.Count} файлов");
             OutputLog = log.ToString();
 
         }
@@ -126,17 +141,21 @@ namespace FFUITools.Wpf.Pages
             string[] filesInArray = FilesInFolder.Select(s => s.FullName).ToArray();
             await SetFFmpeg();
             ProgressBarVisibility = Visibility.Visible;
-            log.AppendLine("Запускаю ffmpeg... \n");
+            log.AppendLine("Запускаю ffmpeg... ");
+            log.AppendLine("Добавляю файлы в задание...");
+            OutputLog = log.ToString();
             var conversion = await FFmpeg.Conversions.FromSnippet.Concatenate(FileName, filesInArray);
-            //conversion.UseMultiThread(false);
+
+            conversion.UseMultiThread(EnableMultiThread);
             //conversion.OnDataReceived += Conversion_OnDataReceived;
 
             conversion.OnProgress += Conversion_OnProgress;
 
             log.AppendLine("Начинаю процесс объединения файлов...");
-
-            var result = await conversion.UseMultiThread(false).Start(cancellationTokenSource.Token);
             OutputLog = log.ToString();
+
+            var result = await conversion.Start(cancellationTokenSource.Token);
+
 
             if (File.Exists(FileName))
             {
@@ -158,7 +177,7 @@ namespace FFUITools.Wpf.Pages
         {
 
             var percent = (int)(args.Duration.TotalSeconds);
-            
+
             OutputLog = log.Append($"{percent}...").ToString();
         }
 
