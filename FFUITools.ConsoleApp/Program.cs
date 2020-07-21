@@ -61,7 +61,7 @@ namespace FFUITools.ConsoleApp
             //var arguments = "-version";
             //var dd = await FFmpeg.Conversions.New().Build(arguments);
             //Console.WriteLine(dd);
-            await SetFFmpeg();
+            //await SetFFmpeg();
 
             var files = GetFilesToConvert(@"D:\new1");
             string[] a = files.Select(s => s.FullName).ToArray();
@@ -85,17 +85,15 @@ namespace FFUITools.ConsoleApp
             Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
             string outputFileName = Path.ChangeExtension(Path.GetTempFileName(), ".mp4");
 
-
-
             await Console.Out.WriteLineAsync($"Finished converion file [{outputFileName}]");
 
         }
 
-        private static async Task SetFFmpeg()
-        {
-            //Set directory where the app should look for FFmpeg executables.
+        //private static async Task SetFFmpeg()
+        //{
+        //    //Set directory where the app should look for FFmpeg executables.
 
-        }
+        //}
 
         private static IEnumerable<FileInfo> GetFilesToConvert(string directoryPath)
         {

@@ -15,32 +15,24 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <GroupBox Header="Укажите имя файла для сохранения с расширением mp4:" Margin="5">
             <DockPanel>
-                <TextBlock Margin="5" Padding="4" x:Name="FileName" Text="{Binding FileName}"></TextBlock>
-                <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action SetOutputFileName}">Выбрать</Button>
+                <TextBlock Margin="5" Padding="4" x:Name="OutputFile" Text="{Binding OutputFile}"></TextBlock>
+                <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action SetOutputFile}">Выбрать</Button>
             </DockPanel>
         </GroupBox>
 
         <GroupBox Grid.Row="1" Header="Укажите папку с файлами mp4:" Margin="5">
             <DockPanel>
                 <TextBlock Margin="5" Padding="4" x:Name="DirectoryName" Text="{Binding DirectoryName}"></TextBlock>
-                <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action FolderSelectDialog}">Выбрать</Button>
+                <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action SelectDirectoryDialog}">Выбрать</Button>
             </DockPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="2" Header="Опции:" Margin="5">
-            <DockPanel>
-                <Label>Включить MultiThread</Label>
-                <CheckBox Margin="5" Padding="4" VerticalAlignment="Center" x:Name="EnableMultiThread" IsChecked="{Binding EnableMultiThread}"></CheckBox>
-            </DockPanel>
-        </GroupBox>
-
-        <GroupBox Grid.Row="3" Header="Лог:" Margin="5">
-            <TextBox Height="250" 
+        <GroupBox Grid.Row="2" Header="Лог:" Margin="5">
+            <TextBox Height="300" 
                      Margin="5" 
                      Padding="4"
                      IsReadOnly="true" 
@@ -52,8 +44,8 @@
                      TextWrapping="Wrap">
             </TextBox>
         </GroupBox>
-        <ProgressBar Grid.Row="4" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" Name="pbStatus" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
-        <Button HorizontalAlignment="Left" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action CancelJob}">Отменить</Button>
-        <Button HorizontalAlignment="Right" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action FFmpegConcatenate}">Начать</Button>
+        <ProgressBar Grid.Row="3" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" Name="pbStatus" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
+        <Button HorizontalAlignment="Left" Grid.Row="4" Margin="5" Padding="4" Command="{s:Action CancelJob}">Отменить</Button>
+        <Button HorizontalAlignment="Right" Grid.Row="4" Margin="5" Padding="4" Command="{s:Action ConcatenateJob}">Начать</Button>
     </Grid>
 </UserControl>

@@ -14,7 +14,7 @@ namespace FFUITools.Wpf.Pages
 
         public ShellViewModel(MainViewModel main)
         {
-            this.DisplayName = " Объединить файлы mp4 в один фаил";
+            this.DisplayName = " Объединить файлы mp4";
 
             this.Items.Add(main);
 
