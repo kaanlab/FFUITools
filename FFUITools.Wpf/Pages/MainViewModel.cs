@@ -188,14 +188,14 @@ namespace FFUITools.Wpf.Pages
 
                         if (exited.ExitCode == 0)
                         {
-                            //log.AppendLine($"{new string('*', 56)}");
-                            //log.AppendLine($"Удаляю временные файлы...");
-                            //FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".ts").ToList();
-                            //foreach (var item in FilesInFolder)
-                            //{
-                            //    log.AppendLine($"Удаляю {item.FullName}...");
-                            //    File.Delete($"{item.FullName}");
-                            //}
+                            log.AppendLine($"{new string('*', 56)}");
+                            log.AppendLine($"Удаляю временные файлы...");
+                            FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".ts").ToList();
+                            foreach (var item in FilesInFolder)
+                            {
+                                log.AppendLine($"Удаляю {item.FullName}...");
+                                File.Delete($"{item.FullName}");
+                            }
 
                             var file = new FileInfo(OutputFile);
                             log.AppendLine($"{new string('*', 56)}");
@@ -212,6 +212,7 @@ namespace FFUITools.Wpf.Pages
 
         private async Task ConcatToTsFiles(string[] filesInArray, string tempFile)
         {
+            log.AppendLine($"{new string('*', 56)}");
             for (int i = 0; i < filesInArray.Length; i++)
             {
                 var mp4FileName = filesInArray[i];
@@ -228,11 +229,11 @@ namespace FFUITools.Wpf.Pages
                 {
                     switch (cmdEvent)
                     {
-                        //case StartedCommandEvent started:
+                        case StartedCommandEvent started:
                         //    log.AppendLine($"Process started; ID: {started.ProcessId}");
-                        //    ProgressBarVisibility = Visibility.Visible;
+                            ProgressBarVisibility = Visibility.Visible;
                         //    OutputLog = log.ToString();
-                        //    break;
+                            break;
                         case ExitedCommandEvent exited:
                             ProgressBarVisibility = Visibility.Collapsed;
                             //log.AppendLine($"Process exited; Code: {exited.ExitCode}");
@@ -241,14 +242,15 @@ namespace FFUITools.Wpf.Pages
 
                             if (exited.ExitCode == 0)
                             {
-                                log.AppendLine($"Выполнено {i + 1} из {filesInArray.Length}");
-                                log.AppendLine($"{new string('*', 56)}");
+                                log.AppendLine($"Выполнено {i + 1} из {filesInArray.Length}");                                
                                 OutputLog = log.ToString();
                             }
                             break;
                     }
                 }
             }
+            log.AppendLine($"{new string('*', 56)}");
+            OutputLog = log.ToString();
 
         }
 
