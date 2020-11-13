@@ -1,4 +1,5 @@
 ﻿using CliWrap;
+using CliWrap.Buffered;
 using CliWrap.EventStream;
 using FFUITools.Wpf.Extentions;
 using Ookii.Dialogs.Wpf;
@@ -9,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -42,6 +44,16 @@ namespace FFUITools.Wpf.Pages
             }
         }
 
+        private string _ffmpgVersion;
+        public string FfmpgVersion
+        {
+            get { return this._ffmpgVersion; }
+            set
+            {
+                SetAndNotify(ref this._ffmpgVersion, value);
+            }
+        }
+
         private string _outputLog;
         public string OutputLog
         {
@@ -56,8 +68,8 @@ namespace FFUITools.Wpf.Pages
         public List<FileInfo> FilesInFolder
         {
             get { return _filesInFolder; }
-            set 
-            { 
+            set
+            {
                 SetAndNotify(ref _filesInFolder, value);
                 this.NotifyOfPropertyChange(() => this.CanConcatenateJob);
             }
@@ -73,15 +85,19 @@ namespace FFUITools.Wpf.Pages
         public MainViewModel()
         {
             //this.DisplayName = "Главная";
+
             ProgressBarVisibility = Visibility.Collapsed;
+            Execute.OnUIThreadAsync(async () => await GetFfmpegVersion());
         }
 
         public void SelectDirectoryDialog()
         {
             OutputLog = String.Empty;
             log = new StringBuilder();
+
             var folderDialog = new VistaFolderBrowserDialog();
             folderDialog.ShowDialog();
+
             DirectoryName = folderDialog.SelectedPath;
 
             if (String.IsNullOrEmpty(DirectoryName))
@@ -103,8 +119,14 @@ namespace FFUITools.Wpf.Pages
         public void SetOutputFile()
         {
             var fileSaveDialog = new VistaSaveFileDialog();
+
+            fileSaveDialog.Filter = "Video Files (*.mp4)|*.mp4";
+            fileSaveDialog.DefaultExt = "mp4";
+            fileSaveDialog.AddExtension = true;
             fileSaveDialog.ShowDialog();
+
             var file = fileSaveDialog.FileName;
+
             if (File.Exists(file))
             {
                 File.Delete(file);
@@ -124,13 +146,13 @@ namespace FFUITools.Wpf.Pages
         public async Task ConcatenateJob()
         {
             string[] filesInArray = FilesInFolder.Select(s => s.FullName).ToArray();
-            DirectoryInfo tempDir = Directory.CreateDirectory(Path.Combine(DirectoryName, "temp"));
+            var tempFile = Path.Combine(DirectoryName, "temptsfiles.txt");
 
             log.AppendLine("Создаю временные файлы...");
-            await ConcatToTempFiles(filesInArray, tempDir);
+            await ConcatToTsFiles(filesInArray, tempFile);
 
             log.AppendLine($"Объединяю временные файлы в файл {OutputFile}... ");
-            await ConcatToSingleFile(tempDir);
+            await ConcatToSingleFile(tempFile);
         }
 
         public bool CanConcatenateJob
@@ -139,76 +161,14 @@ namespace FFUITools.Wpf.Pages
         }
 
         /// <summary>
-        /// Split the array into pieces and run the concatinate process for each piece to temporary directory
+        /// Take all files from directory and concatenate them into single file. Delete all temp files after task is done.
         /// </summary>
-        /// <param name="filesInArray">files for concatinations</param>
-        /// <param name="tempDir">temporary directory for output files</param>
+        /// <param name="tempFile">temporary file with ts paths</param>
         /// <returns>Task</returns>
-        private async Task ConcatToTempFiles(string[] filesInArray, DirectoryInfo tempDir)
+        private async Task ConcatToSingleFile(string tempFile)
         {
-            var splitFiles = filesInArray.Split(300).ToArray();
-
-            for (int i = 0; i < splitFiles.Length; i++)
-            {
-                var fileName = Path.Combine(tempDir.FullName, $"{i + 1}.mp4");
-                var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
-                var arguments = $"-i \"concat:{string.Join("|", splitFiles[i])}\" -c copy \"{fileName}\"";
-                var cmd = Cli.Wrap(command).WithArguments(arguments);
-
-                await foreach (var cmdEvent in cmd.ListenAsync(cancellationTokenSource.Token))
-                {
-                    switch (cmdEvent)
-                    {
-                        case StartedCommandEvent started:
-                            log.AppendLine($"Process started; ID: {started.ProcessId}");
-                            ProgressBarVisibility = Visibility.Visible;
-                            OutputLog = log.ToString();
-                            break;
-                        case ExitedCommandEvent exited:
-                            ProgressBarVisibility = Visibility.Collapsed;
-                            log.AppendLine($"Process exited; Code: {exited.ExitCode}");
-                            OutputLog = log.ToString();
-
-                            if (exited.ExitCode == 0)
-                            {
-                                var file = new FileInfo(fileName);
-                                log.AppendLine($"{new string('*', 56)}");
-                                log.AppendLine($"Завершено {i + 1} из {splitFiles.Length}");
-                                log.AppendLine($"Создан временный фаил: {file.FullName}, размер: {file.Length / (1024 * 1024)} Мб");
-                                log.AppendLine($"{new string('*', 56)}");
-
-                                OutputLog = log.ToString();
-                            }
-                            break;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Take all files from temporary directory and concatenate them into single file. Delete all temp files after task is done.
-        /// </summary>
-        /// <param name="tempDir">temporary directory</param>
-        /// <returns>Task</returns>
-        private async Task ConcatToSingleFile(DirectoryInfo tempDir)
-        {
-            var partsFiles = new DirectoryInfo(tempDir.FullName).GetFiles().Where(x => x.Extension == ".mp4").Select(s => s.FullName).ToArray();
-
-            var tempFile = Path.Combine(DirectoryName, "temp.txt");
-            if (!File.Exists(tempFile))
-            {
-                // Create a file to write to.
-                using (StreamWriter sw = File.CreateText(tempFile))
-                {
-                    foreach (var file in partsFiles)
-                    {
-                        sw.WriteLine($"file \'{file}\'");
-                    }
-                }
-            }
-
             var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
-            var arguments = $"-f concat -safe 0 -i \"{tempFile}\" -c copy \"{OutputFile}\"";
+            var arguments = $"-fflags +genpts -safe 0 -f concat -i \"{tempFile}\" -c copy \"{OutputFile}\"";
             var cmd = Cli.Wrap(command).WithArguments(arguments);
 
             await foreach (var cmdEvent in cmd.ListenAsync(cancellationTokenSource.Token))
@@ -220,10 +180,6 @@ namespace FFUITools.Wpf.Pages
                         ProgressBarVisibility = Visibility.Visible;
                         OutputLog = log.ToString();
                         break;
-                    case StandardErrorCommandEvent stdErr:
-                        log.Append($"Err> {stdErr.Text}");
-                        OutputLog = log.ToString();
-                        break;
                     case ExitedCommandEvent exited:
                         ProgressBarVisibility = Visibility.Collapsed;
                         log.AppendLine($"Process exited; Code: {exited.ExitCode}");
@@ -232,28 +188,84 @@ namespace FFUITools.Wpf.Pages
 
                         if (exited.ExitCode == 0)
                         {
+                            //log.AppendLine($"{new string('*', 56)}");
+                            //log.AppendLine($"Удаляю временные файлы...");
+                            //FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".ts").ToList();
+                            //foreach (var item in FilesInFolder)
+                            //{
+                            //    log.AppendLine($"Удаляю {item.FullName}...");
+                            //    File.Delete($"{item.FullName}");
+                            //}
+
                             var file = new FileInfo(OutputFile);
                             log.AppendLine($"{new string('*', 56)}");
                             log.AppendLine($"ВЫПОЛНЕНО!");
                             log.AppendLine($"Итоговый фаил: {file.FullName}, размер: {file.Length / (1024 * 1024)} Мб");
-
-                            if (Directory.Exists(tempDir.FullName))
-                            {
-                                log.AppendLine($"Удаляю временную директорию...");
-                                Directory.Delete(tempDir.FullName, true);
-                            }
-
-                            if (File.Exists(tempFile))
-                            {
-                                log.AppendLine($"Удаляю временные файлы...");
-                                File.Delete(tempFile);
-                            }
 
                             log.AppendLine($"{new string('*', 56)}");
                             OutputLog = log.ToString();
                         }
                         break;
                 }
+            }
+        }
+
+        private async Task ConcatToTsFiles(string[] filesInArray, string tempFile)
+        {
+            for (int i = 0; i < filesInArray.Length; i++)
+            {
+                var mp4FileName = filesInArray[i];
+                var fileWithoutExtenton = mp4FileName.Remove(mp4FileName.Length - 4);
+                var tsFileName = $"{fileWithoutExtenton}.ts";
+
+                await File.AppendAllTextAsync(tempFile, $"file \'{tsFileName}\'\n");
+
+                var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
+                var arguments = $"-i \"{mp4FileName}\" -c copy -bsf:v h264_mp4toannexb -f mpegts \"{tsFileName}\"";
+                var cmd = Cli.Wrap(command).WithArguments(arguments);
+
+                await foreach (var cmdEvent in cmd.ListenAsync(cancellationTokenSource.Token))
+                {
+                    switch (cmdEvent)
+                    {
+                        //case StartedCommandEvent started:
+                        //    log.AppendLine($"Process started; ID: {started.ProcessId}");
+                        //    ProgressBarVisibility = Visibility.Visible;
+                        //    OutputLog = log.ToString();
+                        //    break;
+                        case ExitedCommandEvent exited:
+                            ProgressBarVisibility = Visibility.Collapsed;
+                            //log.AppendLine($"Process exited; Code: {exited.ExitCode}");
+                            //log.AppendLine("");
+                            //OutputLog = log.ToString();
+
+                            if (exited.ExitCode == 0)
+                            {
+                                log.AppendLine($"Выполнено {i + 1} из {filesInArray.Length}");
+                                log.AppendLine($"{new string('*', 56)}");
+                                OutputLog = log.ToString();
+                            }
+                            break;
+                    }
+                }
+            }
+
+        }
+
+        private async Task GetFfmpegVersion()
+        {
+            var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
+            var arguments = " -version";
+            var result = await Cli.Wrap(command).WithArguments(arguments).ExecuteBufferedAsync();
+            if (string.IsNullOrEmpty(result.StandardOutput))
+            {
+                FfmpgVersion = "Не могу найти ffmpeg!\n Скачайте ffmpeg.exe с сайта https://ffmpeg.org/ и положите в папку с программой";
+            }
+            else
+            {
+                var output = result.StandardOutput;
+                var findNewLine = Regex.Match(output, @"(\r\n|\r|\n)");
+                FfmpgVersion = $"Установлен!\n{output.Remove(findNewLine.Index)}";
             }
         }
 

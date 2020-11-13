@@ -5,11 +5,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:FFUITools.Wpf"
              xmlns:s="https://github.com/canton7/Stylet"
-             xmlns:li="http://github.com/zeluisping/loadingIndicators/xaml/controls"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="400">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -30,8 +30,15 @@
                 <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action SelectDirectoryDialog}">Выбрать</Button>
             </DockPanel>
         </GroupBox>
+        
+        <GroupBox Grid.Row="2" Header="Сведения о ffmpeg:" Margin="5">
+            <DockPanel>
+                <TextBlock Margin="5" Padding="4" Text="{Binding FfmpgVersion}" HorizontalAlignment="Left" Height="40"
+           TextWrapping="WrapWithOverflow"/>
+            </DockPanel>
+        </GroupBox>
 
-        <GroupBox Grid.Row="2" Header="Лог:" Margin="5">
+        <GroupBox Grid.Row="3" Header="Лог:" Margin="5">
             <TextBox Height="300" 
                      Margin="5" 
                      Padding="4"
@@ -44,8 +51,8 @@
                      TextWrapping="Wrap">
             </TextBox>
         </GroupBox>
-        <ProgressBar Grid.Row="3" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" Name="pbStatus" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
-        <Button HorizontalAlignment="Left" Grid.Row="4" Margin="5" Padding="4" Command="{s:Action CancelJob}">Отменить</Button>
-        <Button HorizontalAlignment="Right" Grid.Row="4" Margin="5" Padding="4" Command="{s:Action ConcatenateJob}">Начать</Button>
+        <ProgressBar Grid.Row="4" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" Name="pbStatus" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
+        <Button HorizontalAlignment="Left" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action CancelJob}">Отменить</Button>
+        <Button HorizontalAlignment="Right" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action ConcatenateJob}">Начать</Button>
     </Grid>
 </UserControl>
