@@ -51,7 +51,8 @@
                      TextWrapping="Wrap">
             </TextBox>
         </GroupBox>
-        <ProgressBar Grid.Row="4" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" Name="pbStatus" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
+        <ProgressBar Grid.Row="4" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercentage}" Visibility="{Binding ProgressBarVisibilityPercentage}"/>
+        <ProgressBar Grid.Row="4" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
         <Button HorizontalAlignment="Left" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action CancelJob}">Отменить</Button>
         <Button HorizontalAlignment="Right" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action ConcatenateJob}">Начать</Button>
     </Grid>

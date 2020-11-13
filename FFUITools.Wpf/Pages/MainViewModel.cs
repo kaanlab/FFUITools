@@ -1,7 +1,6 @@
 ﻿using CliWrap;
 using CliWrap.Buffered;
 using CliWrap.EventStream;
-using FFUITools.Wpf.Extentions;
 using Ookii.Dialogs.Wpf;
 using Stylet;
 using System;
@@ -22,6 +21,16 @@ namespace FFUITools.Wpf.Pages
     {
         StringBuilder log = new StringBuilder();
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+        private double _progressPercentage;
+        public double ProgressPercentage
+        {
+            get { return this._progressPercentage; }
+            set
+            {
+                SetAndNotify(ref this._progressPercentage, value);
+            }
+        }
 
         private string _directoryName;
         public string DirectoryName
@@ -75,6 +84,13 @@ namespace FFUITools.Wpf.Pages
             }
         }
 
+        private Visibility _progressBarVisibilityPercentage;
+        public Visibility ProgressBarVisibilityPercentage
+        {
+            get { return _progressBarVisibilityPercentage; }
+            set { SetAndNotify(ref _progressBarVisibilityPercentage, value); }
+        }
+
         private Visibility _progressBarVisibility;
         public Visibility ProgressBarVisibility
         {
@@ -87,6 +103,8 @@ namespace FFUITools.Wpf.Pages
             //this.DisplayName = "Главная";
 
             ProgressBarVisibility = Visibility.Collapsed;
+            ProgressBarVisibilityPercentage = Visibility.Collapsed;
+
             Execute.OnUIThreadAsync(async () => await GetFfmpegVersion());
         }
 
@@ -167,6 +185,8 @@ namespace FFUITools.Wpf.Pages
         /// <returns>Task</returns>
         private async Task ConcatToSingleFile(string tempFile)
         {
+            ProgressBarVisibility = Visibility.Visible;
+
             var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
             var arguments = $"-fflags +genpts -safe 0 -f concat -i \"{tempFile}\" -c copy \"{OutputFile}\"";
             var cmd = Cli.Wrap(command).WithArguments(arguments);
@@ -177,42 +197,47 @@ namespace FFUITools.Wpf.Pages
                 {
                     case StartedCommandEvent started:
                         log.AppendLine($"Process started; ID: {started.ProcessId}");
-                        ProgressBarVisibility = Visibility.Visible;
                         OutputLog = log.ToString();
                         break;
                     case ExitedCommandEvent exited:
-                        ProgressBarVisibility = Visibility.Collapsed;
+ 
                         log.AppendLine($"Process exited; Code: {exited.ExitCode}");
                         log.AppendLine("");
                         OutputLog = log.ToString();
 
                         if (exited.ExitCode == 0)
                         {
-                            log.AppendLine($"{new string('*', 56)}");
+                            log.AppendLine($"{new string('*', 64)}");
                             log.AppendLine($"Удаляю временные файлы...");
                             FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".ts").ToList();
                             foreach (var item in FilesInFolder)
                             {
-                                log.AppendLine($"Удаляю {item.FullName}...");
+                                log.AppendLine($"Удаляю {item.FullName} ...");
                                 File.Delete($"{item.FullName}");
                             }
+                            log.AppendLine($"Удаляю {tempFile} ...");
+                            File.Delete(tempFile);
 
                             var file = new FileInfo(OutputFile);
-                            log.AppendLine($"{new string('*', 56)}");
+                            log.AppendLine($"{new string('*', 64)}");
                             log.AppendLine($"ВЫПОЛНЕНО!");
                             log.AppendLine($"Итоговый фаил: {file.FullName}, размер: {file.Length / (1024 * 1024)} Мб");
-
-                            log.AppendLine($"{new string('*', 56)}");
+                            log.AppendLine($"{new string('*', 64)}");
                             OutputLog = log.ToString();
                         }
                         break;
                 }
             }
+            ProgressBarVisibility = Visibility.Collapsed;
         }
 
         private async Task ConcatToTsFiles(string[] filesInArray, string tempFile)
         {
-            log.AppendLine($"{new string('*', 56)}");
+            log.AppendLine($"{new string('*', 64)}");
+            ProgressBarVisibilityPercentage = Visibility.Visible;
+
+            var onePercent = 100 / (double)filesInArray.Length;
+
             for (int i = 0; i < filesInArray.Length; i++)
             {
                 var mp4FileName = filesInArray[i];
@@ -231,17 +256,18 @@ namespace FFUITools.Wpf.Pages
                     {
                         case StartedCommandEvent started:
                         //    log.AppendLine($"Process started; ID: {started.ProcessId}");
-                            ProgressBarVisibility = Visibility.Visible;
+                         //   ProgressBarVisibility = Visibility.Visible;
                         //    OutputLog = log.ToString();
                             break;
                         case ExitedCommandEvent exited:
-                            ProgressBarVisibility = Visibility.Collapsed;
+                            //ProgressBarVisibility = Visibility.Collapsed;
                             //log.AppendLine($"Process exited; Code: {exited.ExitCode}");
                             //log.AppendLine("");
                             //OutputLog = log.ToString();
 
                             if (exited.ExitCode == 0)
-                            {
+                            {                                
+                                ProgressPercentage += onePercent;
                                 log.AppendLine($"Выполнено {i + 1} из {filesInArray.Length}");                                
                                 OutputLog = log.ToString();
                             }
@@ -249,8 +275,9 @@ namespace FFUITools.Wpf.Pages
                     }
                 }
             }
-            log.AppendLine($"{new string('*', 56)}");
+            log.AppendLine($"{new string('*', 64)}");
             OutputLog = log.ToString();
+            ProgressBarVisibilityPercentage = Visibility.Collapsed;
 
         }
 
