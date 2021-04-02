@@ -1,7 +1,6 @@
 ﻿using CliWrap;
 using CliWrap.Buffered;
 using CliWrap.EventStream;
-using Ookii.Dialogs.Wpf;
 using Stylet;
 using System;
 using System.Collections.Generic;
@@ -13,11 +12,11 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-
+using System.Windows.Forms;
 
 namespace FFUITools.Wpf.Pages
 {
-    public class MainViewModel : Screen, IDisposable
+    public class MainViewModel : Stylet.Screen, IDisposable
     {
         StringBuilder log = new StringBuilder();
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -113,7 +112,7 @@ namespace FFUITools.Wpf.Pages
             OutputLog = String.Empty;
             log = new StringBuilder();
 
-            var folderDialog = new VistaFolderBrowserDialog();
+            var folderDialog = new FolderBrowserDialog();
             folderDialog.ShowDialog();
 
             DirectoryName = folderDialog.SelectedPath;
@@ -136,7 +135,7 @@ namespace FFUITools.Wpf.Pages
 
         public void SetOutputFile()
         {
-            var fileSaveDialog = new VistaSaveFileDialog();
+            var fileSaveDialog = new SaveFileDialog();
 
             fileSaveDialog.Filter = "Video Files (*.mp4)|*.mp4";
             fileSaveDialog.DefaultExt = "mp4";
@@ -200,7 +199,7 @@ namespace FFUITools.Wpf.Pages
                         OutputLog = log.ToString();
                         break;
                     case ExitedCommandEvent exited:
- 
+
                         log.AppendLine($"Process exited; Code: {exited.ExitCode}");
                         log.AppendLine("");
                         OutputLog = log.ToString();
@@ -255,9 +254,9 @@ namespace FFUITools.Wpf.Pages
                     switch (cmdEvent)
                     {
                         case StartedCommandEvent started:
-                        //    log.AppendLine($"Process started; ID: {started.ProcessId}");
-                         //   ProgressBarVisibility = Visibility.Visible;
-                        //    OutputLog = log.ToString();
+                            //    log.AppendLine($"Process started; ID: {started.ProcessId}");
+                            //   ProgressBarVisibility = Visibility.Visible;
+                            //    OutputLog = log.ToString();
                             break;
                         case ExitedCommandEvent exited:
                             //ProgressBarVisibility = Visibility.Collapsed;
@@ -266,9 +265,9 @@ namespace FFUITools.Wpf.Pages
                             //OutputLog = log.ToString();
 
                             if (exited.ExitCode == 0)
-                            {                                
+                            {
                                 ProgressPercentage += onePercent;
-                                log.AppendLine($"Выполнено {i + 1} из {filesInArray.Length}");                                
+                                log.AppendLine($"Выполнено {i + 1} из {filesInArray.Length}");
                                 OutputLog = log.ToString();
                             }
                             break;
@@ -284,17 +283,17 @@ namespace FFUITools.Wpf.Pages
         private async Task GetFfmpegVersion()
         {
             var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
-            var arguments = " -version";
-            var result = await Cli.Wrap(command).WithArguments(arguments).ExecuteBufferedAsync();
-            if (string.IsNullOrEmpty(result.StandardOutput))
+            if (File.Exists(command))
             {
-                FfmpgVersion = "Не могу найти ffmpeg!\n Скачайте ffmpeg.exe с сайта https://ffmpeg.org/ и положите в папку с программой";
-            }
-            else
-            {
+                var arguments = " -version";
+                var result = await Cli.Wrap(command).WithArguments(arguments).ExecuteBufferedAsync();
                 var output = result.StandardOutput;
                 var findNewLine = Regex.Match(output, @"(\r\n|\r|\n)");
                 FfmpgVersion = $"Установлен!\n{output.Remove(findNewLine.Index)}";
+            }
+            else
+            {
+                FfmpgVersion = "Не могу найти ffmpeg!\n Скачайте ffmpeg.exe с сайта https://ffmpeg.org/ и положите в папку с программой";
             }
         }
 

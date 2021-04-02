@@ -1,0 +1,6 @@
+assembly-versioning-scheme: MajorMinorPatch
+mode: Mainline
+branches:
+  main:
+    tag: beta
+    increment: Patch

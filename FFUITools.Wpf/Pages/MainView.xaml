@@ -15,22 +15,22 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+        </Grid.RowDefinitions>        
 
-        <GroupBox Header="Укажите имя файла для сохранения с расширением mp4:" Margin="5">
+        <GroupBox  Header="Папка с файлами mp4:" Margin="5">
+            <DockPanel>
+                <TextBlock Margin="5" Padding="4" x:Name="DirectoryName" Text="{Binding DirectoryName}"></TextBlock>
+                <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action SelectDirectoryDialog}">Выбрать</Button>
+            </DockPanel>
+        </GroupBox>
+
+        <GroupBox Grid.Row="1" Header="Имя файла для сохранения с расширением mp4:" Margin="5">
             <DockPanel>
                 <TextBlock Margin="5" Padding="4" x:Name="OutputFile" Text="{Binding OutputFile}"></TextBlock>
                 <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action SetOutputFile}">Выбрать</Button>
             </DockPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="1" Header="Укажите папку с файлами mp4:" Margin="5">
-            <DockPanel>
-                <TextBlock Margin="5" Padding="4" x:Name="DirectoryName" Text="{Binding DirectoryName}"></TextBlock>
-                <Button HorizontalAlignment="Right" Margin="5" Padding="4" Command="{s:Action SelectDirectoryDialog}">Выбрать</Button>
-            </DockPanel>
-        </GroupBox>
-        
         <GroupBox Grid.Row="2" Header="Сведения о ffmpeg:" Margin="5">
             <DockPanel>
                 <TextBlock Margin="5" Padding="4" Text="{Binding FfmpgVersion}" HorizontalAlignment="Left" Height="40"
