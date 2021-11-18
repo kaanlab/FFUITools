@@ -18,8 +18,8 @@ namespace FFUITools.Wpf.Pages
 {
     public class MainViewModel : Stylet.Screen, IDisposable
     {
-        StringBuilder log = new StringBuilder();
-        CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private StringBuilder log;
+        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
         private double _progressPercentage;
         public double ProgressPercentage
@@ -100,7 +100,7 @@ namespace FFUITools.Wpf.Pages
         public MainViewModel()
         {
             //this.DisplayName = "Главная";
-
+            log = new StringBuilder();
             ProgressBarVisibility = Visibility.Collapsed;
             ProgressBarVisibilityPercentage = Visibility.Collapsed;
 
@@ -110,7 +110,7 @@ namespace FFUITools.Wpf.Pages
         public void SelectDirectoryDialog()
         {
             OutputLog = String.Empty;
-            log = new StringBuilder();
+            log = log.Clear();
 
             var folderDialog = new FolderBrowserDialog();
             folderDialog.ShowDialog();
@@ -124,12 +124,9 @@ namespace FFUITools.Wpf.Pages
             }
 
             FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".mp4").ToList();
-            foreach (var item in FilesInFolder)
-            {
-                log.AppendLine($"{item.FullName}");
-            }
 
-            log.AppendLine($"Найдено {FilesInFolder.Count} файлов");
+            log.Append($"{FilesInFolder.Select(x => x.FullName)}\n");
+            log.AppendLine($"\nНайдено {FilesInFolder.Count} файлов");
             OutputLog = log.ToString();
         }
 
@@ -150,12 +147,15 @@ namespace FFUITools.Wpf.Pages
             }
 
             OutputFile = file;
+            log.AppendLine($"\nФаил для хранения: {file}");
+            OutputLog = log.ToString();
         }
 
         public void CancelJob()
         {
-            log.AppendLine("\nЗадание отменено!");
             cancellationTokenSource.Cancel();
+
+            log.AppendLine("\nЗадание отменено!");            
             OutputLog = log.ToString();
             ProgressBarVisibility = Visibility.Collapsed;
         }
@@ -199,9 +199,7 @@ namespace FFUITools.Wpf.Pages
                         OutputLog = log.ToString();
                         break;
                     case ExitedCommandEvent exited:
-
-                        log.AppendLine($"Process exited; Code: {exited.ExitCode}");
-                        log.AppendLine("");
+                        log.AppendLine($"Process exited; Code: {exited.ExitCode}\n");
                         OutputLog = log.ToString();
 
                         if (exited.ExitCode == 0)
@@ -210,12 +208,13 @@ namespace FFUITools.Wpf.Pages
                             log.AppendLine($"Удаляю временные файлы...");
                             FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".ts").ToList();
                             foreach (var item in FilesInFolder)
-                            {
-                                log.AppendLine($"Удаляю {item.FullName} ...");
+                            {                                
                                 File.Delete($"{item.FullName}");
                             }
-                            log.AppendLine($"Удаляю {tempFile} ...");
+                            log.Append($"Удаляю {FilesInFolder.Select(x => x.FullName)} ...\n");
+                            
                             File.Delete(tempFile);
+                            log.AppendLine($"Удаляю {tempFile} ...");
 
                             var file = new FileInfo(OutputFile);
                             log.AppendLine($"{new string('*', 64)}");
