@@ -4,8 +4,12 @@ using CliWrap.EventStream;
 using Stylet;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,8 +22,29 @@ namespace FFUITools.Wpf.Pages
 {
     public class MainViewModel : Stylet.Screen, IDisposable
     {
-        private StringBuilder log;
+        private StringBuilder log = new StringBuilder();
+        private bool ffmpegIsInstalled = false;
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+        private bool _canCancelJob;
+        public bool CanCancelJob
+        {
+            get { return this._canCancelJob; }
+            set
+            {
+                SetAndNotify(ref this._canCancelJob, value);
+            }
+        }
+
+        private bool _canDownloadFfmpeg;
+        public bool CanDownloadFfmpeg
+        {
+            get { return this._canDownloadFfmpeg; }
+            set
+            {
+                SetAndNotify(ref this._canDownloadFfmpeg, value);
+            }
+        }
 
         private double _progressPercentage;
         public double ProgressPercentage
@@ -52,13 +77,13 @@ namespace FFUITools.Wpf.Pages
             }
         }
 
-        private string _ffmpgVersion;
-        public string FfmpgVersion
+        private string _ffmpegVersion;
+        public string FfmpegVersion
         {
-            get { return this._ffmpgVersion; }
+            get { return this._ffmpegVersion; }
             set
             {
-                SetAndNotify(ref this._ffmpgVersion, value);
+                SetAndNotify(ref this._ffmpegVersion, value);
             }
         }
 
@@ -100,7 +125,7 @@ namespace FFUITools.Wpf.Pages
         public MainViewModel()
         {
             //this.DisplayName = "Главная";
-            log = new StringBuilder();
+            CanDownloadFfmpeg = true;
             ProgressBarVisibility = Visibility.Collapsed;
             ProgressBarVisibilityPercentage = Visibility.Collapsed;
 
@@ -124,10 +149,14 @@ namespace FFUITools.Wpf.Pages
             }
 
             FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".mp4").ToList();
-
-            log.Append($"{FilesInFolder.Select(x => x.FullName)}\n");
-            log.AppendLine($"\nНайдено {FilesInFolder.Count} файлов");
+            var filesName = GetFileNames(FilesInFolder);
+            foreach (var file in filesName)
+            {
+                log.AppendLine(file);
+            }
+            log.AppendLine($"Найдено {filesName.Count} файлов");
             OutputLog = log.ToString();
+
         }
 
         public void SetOutputFile()
@@ -155,13 +184,26 @@ namespace FFUITools.Wpf.Pages
         {
             cancellationTokenSource.Cancel();
 
-            log.AppendLine("\nЗадание отменено!");            
+            log.AppendLine("\nЗадание отменено!");
             OutputLog = log.ToString();
+            ProgressBarVisibility = Visibility.Collapsed;
+            CanCancelJob = false;
+        }
+
+        public void Clear()
+        {
+            cancellationTokenSource = new CancellationTokenSource();
+            OutputLog = String.Empty;
+            DirectoryName = String.Empty;
+            FilesInFolder = new List<FileInfo>();
+            OutputFile = String.Empty;
+            log = log.Clear();
             ProgressBarVisibility = Visibility.Collapsed;
         }
 
         public async Task ConcatenateJob()
         {
+            CanCancelJob = true;
             string[] filesInArray = FilesInFolder.Select(s => s.FullName).ToArray();
             var tempFile = Path.Combine(DirectoryName, "temptsfiles.txt");
 
@@ -170,12 +212,15 @@ namespace FFUITools.Wpf.Pages
 
             log.AppendLine($"Объединяю временные файлы в файл {OutputFile}... ");
             await ConcatToSingleFile(tempFile);
+            CanCancelJob = false;
         }
 
         public bool CanConcatenateJob
         {
-            get { return !String.IsNullOrEmpty(OutputFile) && FilesInFolder.Count > 0; }
+            get { return !String.IsNullOrEmpty(OutputFile) && FilesInFolder.Count > 0 && ffmpegIsInstalled; }
         }
+
+        public TimeSpan Timeout { get; private set; }
 
         /// <summary>
         /// Take all files from directory and concatenate them into single file. Delete all temp files after task is done.
@@ -189,7 +234,6 @@ namespace FFUITools.Wpf.Pages
             var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
             var arguments = $"-fflags +genpts -safe 0 -f concat -i \"{tempFile}\" -c copy \"{OutputFile}\"";
             var cmd = Cli.Wrap(command).WithArguments(arguments);
-
             await foreach (var cmdEvent in cmd.ListenAsync(cancellationTokenSource.Token))
             {
                 switch (cmdEvent)
@@ -207,19 +251,20 @@ namespace FFUITools.Wpf.Pages
                             log.AppendLine($"{new string('*', 64)}");
                             log.AppendLine($"Удаляю временные файлы...");
                             FilesInFolder = new DirectoryInfo(DirectoryName).GetFiles().Where(x => x.Extension == ".ts").ToList();
-                            foreach (var item in FilesInFolder)
-                            {                                
-                                File.Delete($"{item.FullName}");
+                            var fileNames = GetFileNames(FilesInFolder);
+                            foreach (var file in fileNames)
+                            {
+                                File.Delete($"{file}");
+                                log.AppendLine($"Удаляю {file} ...");
                             }
-                            log.Append($"Удаляю {FilesInFolder.Select(x => x.FullName)} ...\n");
-                            
+
                             File.Delete(tempFile);
                             log.AppendLine($"Удаляю {tempFile} ...");
 
-                            var file = new FileInfo(OutputFile);
+                            var outputFile = new FileInfo(OutputFile);
                             log.AppendLine($"{new string('*', 64)}");
                             log.AppendLine($"ВЫПОЛНЕНО!");
-                            log.AppendLine($"Итоговый фаил: {file.FullName}, размер: {file.Length / (1024 * 1024)} Мб");
+                            log.AppendLine($"Итоговый фаил: {outputFile.FullName}, размер: {outputFile.Length / (1024 * 1024)} Мб");
                             log.AppendLine($"{new string('*', 64)}");
                             OutputLog = log.ToString();
                         }
@@ -235,7 +280,6 @@ namespace FFUITools.Wpf.Pages
             ProgressBarVisibilityPercentage = Visibility.Visible;
 
             var onePercent = 100 / (double)filesInArray.Length;
-
             for (int i = 0; i < filesInArray.Length; i++)
             {
                 var mp4FileName = filesInArray[i];
@@ -247,6 +291,7 @@ namespace FFUITools.Wpf.Pages
                 var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
                 var arguments = $"-i \"{mp4FileName}\" -c copy -bsf:v h264_mp4toannexb -f mpegts \"{tsFileName}\"";
                 var cmd = Cli.Wrap(command).WithArguments(arguments);
+
 
                 await foreach (var cmdEvent in cmd.ListenAsync(cancellationTokenSource.Token))
                 {
@@ -272,11 +317,11 @@ namespace FFUITools.Wpf.Pages
                             break;
                     }
                 }
+
             }
             log.AppendLine($"{new string('*', 64)}");
             OutputLog = log.ToString();
             ProgressBarVisibilityPercentage = Visibility.Collapsed;
-
         }
 
         private async Task GetFfmpegVersion()
@@ -288,17 +333,58 @@ namespace FFUITools.Wpf.Pages
                 var result = await Cli.Wrap(command).WithArguments(arguments).ExecuteBufferedAsync();
                 var output = result.StandardOutput;
                 var findNewLine = Regex.Match(output, @"(\r\n|\r|\n)");
-                FfmpgVersion = $"Установлен!\n{output.Remove(findNewLine.Index)}";
+                FfmpegVersion = $"Установлен!\n{output.Remove(findNewLine.Index)}";
+                ffmpegIsInstalled = true;
             }
             else
             {
-                FfmpgVersion = "Не могу найти ffmpeg!\n Скачайте ffmpeg.exe с сайта https://ffmpeg.org/ и положите в папку с программой";
+                FfmpegVersion = "Не могу найти ffmpeg!\n Нажмите кнопку скачать и дождитесь установки ffmpeg";
+                ffmpegIsInstalled = false;
             }
         }
 
+
+        public async Task DownloadFfmpeg()
+        {
+            ProgressBarVisibilityPercentage = Visibility.Visible;
+            var workingDir = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
+            var fileInfo = new FileInfo($"ffmpeg-release-essentials.zip");
+            using (var webClient = new WebClient())
+            {
+                webClient.DownloadFileCompleted += (s, e) =>
+                {
+                    log.AppendLine("Загрузка ffmpeg завершена!");
+                    OutputLog = log.ToString();
+                    extractFfmpeg(fileInfo.FullName, workingDir);                    
+                };
+                webClient.DownloadProgressChanged += (s, e) => { ProgressPercentage = e.ProgressPercentage; };
+                await webClient.DownloadFileTaskAsync($"https://www.gyan.dev/ffmpeg/builds/{fileInfo.Name}", fileInfo.FullName);
+            }
+            ProgressBarVisibilityPercentage = Visibility.Collapsed;
+            await GetFfmpegVersion();
+            CanDownloadFfmpeg = false;
+        }
+
+        private void extractFfmpeg(string zipPath, string extractPath)
+        {
+            using (ZipArchive archive = ZipFile.OpenRead(zipPath))
+            {
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                    if (entry.FullName.Contains("ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.Name));
+                        entry.ExtractToFile(destinationPath);
+                    }
+                }
+            }
+        }
+
+        private IReadOnlyCollection<string> GetFileNames(List<FileInfo> filesInFolder) =>
+            filesInFolder.Select(x => x.FullName).ToArray();
+
         public void Dispose()
         {
-
         }
     }
 }
