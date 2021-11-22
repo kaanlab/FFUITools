@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:FFUITools.Wpf"
              xmlns:s="https://github.com/canton7/Stylet"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="400">
+             d:DesignHeight="650" d:DesignWidth="400">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -32,10 +32,15 @@
         </GroupBox>
 
         <GroupBox Grid.Row="2" Header="Сведения о ffmpeg:" Margin="5">
-            <DockPanel>
-                <TextBlock Margin="5" Padding="4" Text="{Binding FfmpgVersion}" HorizontalAlignment="Left" Height="40"
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.7*" />
+                    <ColumnDefinition Width="0.3*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="5" Padding="4" Text="{Binding FfmpegVersion}" HorizontalAlignment="Left" Height="40"
            TextWrapping="WrapWithOverflow"/>
-            </DockPanel>
+                <Button Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5" Padding="4" Command="{s:Action DownloadFfmpeg}">Скачать</Button>
+            </Grid>
         </GroupBox>
 
         <GroupBox Grid.Row="3" Header="Лог:" Margin="5">
@@ -51,9 +56,19 @@
                      TextWrapping="Wrap">
             </TextBox>
         </GroupBox>
-        <ProgressBar Grid.Row="4" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercentage}" Visibility="{Binding ProgressBarVisibilityPercentage}"/>
-        <ProgressBar Grid.Row="4" Height="15" Margin="5" Padding="4" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
-        <Button HorizontalAlignment="Left" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action CancelJob}">Отменить</Button>
-        <Button HorizontalAlignment="Right" Grid.Row="5" Margin="5" Padding="4" Command="{s:Action ConcatenateJob}">Начать</Button>
+        <Grid Grid.Row="4" Height="15">
+            <ProgressBar Margin="10" Padding="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercentage}" Visibility="{Binding ProgressBarVisibilityPercentage}"/>
+            <ProgressBar Margin="10" Padding="4" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
+        </Grid>
+            <Grid  Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.18*" />
+                <ColumnDefinition Width="0.18*" />
+                <ColumnDefinition Width="0.6*" />
+            </Grid.ColumnDefinitions>
+            <Button HorizontalAlignment="Center" Grid.Column="0" Margin="10" Padding="4" Command="{s:Action CancelJob}">Отменить</Button>
+            <Button HorizontalAlignment="Center"  Grid.Column="1" Margin="0,10" Padding="4" Command="{s:Action Clear}">Очистить</Button>
+            <Button Grid.Column="2" HorizontalAlignment="Right" Grid.Row="5" Margin="10" Padding="4" Command="{s:Action ConcatenateJob}">Начать</Button>
+        </Grid>
     </Grid>
 </UserControl>
