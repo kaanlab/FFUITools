@@ -13,7 +13,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="40" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>        
 
@@ -56,10 +56,8 @@
                      TextWrapping="Wrap">
             </TextBox>
         </GroupBox>
-        <Grid Grid.Row="4" Height="15">
-            <ProgressBar Margin="10" Padding="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercentage}" Visibility="{Binding ProgressBarVisibilityPercentage}"/>
-            <ProgressBar Margin="10" Padding="4" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
-        </Grid>
+            <ProgressBar Grid.Row="4" Margin="15" Padding="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercentage}" Visibility="{Binding ProgressBarVisibilityPercentage}"/>
+            <ProgressBar Grid.Row="4" Margin="15" Padding="4" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="{Binding ProgressBarVisibility}"/>
             <Grid  Grid.Row="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.18*" />
