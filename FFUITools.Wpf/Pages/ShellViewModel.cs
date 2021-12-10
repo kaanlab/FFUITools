@@ -23,7 +23,7 @@ namespace FFUITools.Wpf.Pages
 
         private static string GetExecutingAssemblyAttribute<T>(Func<T, string> value) where T : Attribute
         {
-            T attribute = (T)Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(T));
+            T attribute = Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(T)) as T;
             return value.Invoke(attribute);
         }
 

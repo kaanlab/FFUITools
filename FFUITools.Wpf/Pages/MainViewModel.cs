@@ -19,7 +19,7 @@ using System.Windows.Forms;
 
 namespace FFUITools.Wpf.Pages
 {
-    public class MainViewModel : Stylet.Screen, IDisposable
+    public class MainViewModel : Stylet.Screen
     {
         private StringBuilder log = new StringBuilder();
         private bool ffmpegIsInstalled = false;
@@ -32,16 +32,6 @@ namespace FFUITools.Wpf.Pages
             set
             {
                 SetAndNotify(ref this._canCancelJob, value);
-            }
-        }
-
-        private bool _canDownloadFfmpeg;
-        public bool CanDownloadFfmpeg
-        {
-            get { return this._canDownloadFfmpeg; }
-            set
-            {
-                SetAndNotify(ref this._canDownloadFfmpeg, value);
             }
         }
 
@@ -124,7 +114,6 @@ namespace FFUITools.Wpf.Pages
         public MainViewModel()
         {
             //this.DisplayName = "Главная";
-            CanDownloadFfmpeg = true;
             ProgressBarVisibility = Visibility.Collapsed;
             ProgressBarVisibilityPercentage = Visibility.Collapsed;
 
@@ -377,6 +366,12 @@ namespace FFUITools.Wpf.Pages
             }            
         }
 
+        public bool CanDownloadFfmpeg
+        {
+            get { return ffmpegIsInstalled; }
+
+        }
+
         public async Task DownloadFfmpeg()
         {
             try
@@ -399,7 +394,6 @@ namespace FFUITools.Wpf.Pages
                 }
                 ProgressBarVisibilityPercentage = Visibility.Collapsed;
                 await GetFfmpegVersion();
-                CanDownloadFfmpeg = false;
             }
             catch (Exception ex)
             {
@@ -434,12 +428,9 @@ namespace FFUITools.Wpf.Pages
             }           
         }
 
-        private ReadOnlyMemory<string> GetFileNames(List<FileInfo> filesInFolder) =>
+        private static ReadOnlyMemory<string> GetFileNames(List<FileInfo> filesInFolder) =>
             filesInFolder.Select(x => x.FullName).ToArray();
 
-        public void Dispose()
-        {
-        }
     }
 }
 
