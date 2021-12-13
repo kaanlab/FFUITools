@@ -22,7 +22,6 @@ namespace FFUITools.Wpf.Pages
     public class MainViewModel : Stylet.Screen
     {
         private StringBuilder log = new StringBuilder();
-        private bool ffmpegIsInstalled = false;
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
         private bool _canCancelJob;
@@ -32,6 +31,17 @@ namespace FFUITools.Wpf.Pages
             set
             {
                 SetAndNotify(ref this._canCancelJob, value);
+            }
+        }
+
+        private bool _IsFfmpegInstalled;
+        public bool IsFfmpegInstalled
+        {
+            get { return this._IsFfmpegInstalled;  }
+            set
+            {
+                SetAndNotify(ref this._IsFfmpegInstalled, value);
+                this.NotifyOfPropertyChange(() => this.CanDownloadFfmpeg);
             }
         }
 
@@ -188,6 +198,11 @@ namespace FFUITools.Wpf.Pages
             ProgressBarVisibility = Visibility.Collapsed;
         }
 
+        public bool CanConcatenateJob
+        {
+            get { return !String.IsNullOrEmpty(OutputFile) && FilesInFolder.Count > 0 && IsFfmpegInstalled; }
+        }
+
         public async Task ConcatenateJob()
         {
             try
@@ -209,11 +224,6 @@ namespace FFUITools.Wpf.Pages
                 log.Append(ex.Message);
                 OutputLog = log.ToString();
             }
-        }
-
-        public bool CanConcatenateJob
-        {
-            get { return !String.IsNullOrEmpty(OutputFile) && FilesInFolder.Count > 0 && ffmpegIsInstalled; }
         }
 
         public TimeSpan Timeout { get; private set; }
@@ -276,15 +286,15 @@ namespace FFUITools.Wpf.Pages
                 log.AppendLine("Операция завершена с ошибкой:");
                 log.Append(ex.Message);
                 OutputLog = log.ToString();
-            }            
+            }
         }
 
         private async Task ConcatToTsFiles(ReadOnlyMemory<string> filesInArray, string tempFile)
         {
             try
             {
-                log.AppendLine($"{new string('*', 64)}");
                 ProgressBarVisibilityPercentage = Visibility.Visible;
+                log.AppendLine($"{new string('*', 64)}");
 
                 var onePercent = 100 / (double)filesInArray.Length;
                 for (int i = 0; i < filesInArray.Length; i++)
@@ -335,27 +345,27 @@ namespace FFUITools.Wpf.Pages
                 log.AppendLine("Операция завершена с ошибкой:");
                 log.Append(ex.Message);
                 OutputLog = log.ToString();
-            }            
+            }
         }
 
         private async Task GetFfmpegVersion()
         {
             try
             {
-                var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
-                if (File.Exists(command))
+                if (CheckIfFfmpegExists())
                 {
+                    var command = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe");
                     var arguments = " -version";
                     var result = await Cli.Wrap(command).WithArguments(arguments).ExecuteBufferedAsync();
                     var output = result.StandardOutput;
                     var findNewLine = Regex.Match(output, @"(\r\n|\r|\n)");
                     FfmpegVersion = $"{output.Remove(findNewLine.Index)}";
-                    ffmpegIsInstalled = true;
+                    IsFfmpegInstalled = true;
                 }
                 else
                 {
                     FfmpegVersion = "Не могу найти ffmpeg!\nНажмите кнопку скачать и дождитесь установки ffmpeg";
-                    ffmpegIsInstalled = false;
+                    IsFfmpegInstalled= false;
                 }
             }
             catch (Exception ex)
@@ -363,22 +373,21 @@ namespace FFUITools.Wpf.Pages
                 log.AppendLine("Операция завершена с ошибкой:");
                 log.Append(ex.Message);
                 OutputLog = log.ToString();
-            }            
+            }
         }
 
         public bool CanDownloadFfmpeg
         {
-            get { return ffmpegIsInstalled; }
-
+            get { return !CheckIfFfmpegExists(); }
         }
 
         public async Task DownloadFfmpeg()
         {
             try
             {
-                log.AppendLine("Начинаю загрузку ffmpeg ...");
-                OutputLog = log.ToString();
                 ProgressBarVisibilityPercentage = Visibility.Visible;
+                log.AppendLine("Начинаю загрузку ffmpeg ...");
+                OutputLog = log.ToString();                
                 var workingDir = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
                 var fileInfo = new FileInfo($"ffmpeg-release-essentials.zip");
                 using (var webClient = new WebClient())
@@ -391,16 +400,16 @@ namespace FFUITools.Wpf.Pages
                     };
                     webClient.DownloadProgressChanged += (s, e) => { ProgressPercentage = e.ProgressPercentage; };
                     await webClient.DownloadFileTaskAsync($"https://www.gyan.dev/ffmpeg/builds/{fileInfo.Name}", fileInfo.FullName);
-                }
-                ProgressBarVisibilityPercentage = Visibility.Collapsed;
+                }                
                 await GetFfmpegVersion();
+                ProgressBarVisibilityPercentage = Visibility.Collapsed;
             }
             catch (Exception ex)
             {
                 log.AppendLine("Операция завершена с ошибкой:");
                 log.Append(ex.Message);
                 OutputLog = log.ToString();
-            }            
+            }
         }
 
         private void ExtractFfmpeg(string zipPath, string extractPath)
@@ -414,7 +423,7 @@ namespace FFUITools.Wpf.Pages
                         if (entry.FullName.Contains("ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
                         {
                             string destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.Name));
-                            entry.ExtractToFile(destinationPath);                           
+                            entry.ExtractToFile(destinationPath);
                         }
                     }
                 }
@@ -425,11 +434,14 @@ namespace FFUITools.Wpf.Pages
                 log.AppendLine("Операция завершена с ошибкой:");
                 log.Append(ex.Message);
                 OutputLog = log.ToString();
-            }           
+            }
         }
 
         private static ReadOnlyMemory<string> GetFileNames(List<FileInfo> filesInFolder) =>
             filesInFolder.Select(x => x.FullName).ToArray();
+
+        private static bool CheckIfFfmpegExists() => 
+            File.Exists(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "ffmpeg.exe"));
 
     }
 }

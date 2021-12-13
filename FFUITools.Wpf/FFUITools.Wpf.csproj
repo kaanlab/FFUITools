@@ -9,7 +9,7 @@
     <Authors>kaan</Authors>
     <Company>kaanlab</Company>
     <ApplicationIcon>Merge_Files_icon-icons.com_55864.ico</ApplicationIcon>
-    <AssemblyVersion>1.2.2.0</AssemblyVersion>
+    <AssemblyVersion>1.2.2.1</AssemblyVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.3.3" />
